@@ -37,7 +37,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         // Plugin Settings ##
         const version = '0.1';
         const text_domain = 'q-gwpd'; // for translation ##
-        const cache = false;
+        const cache = true;
         const cache_timeout = DAY_IN_SECONDS; // 60*60*24
         const debug = false;
 
@@ -438,7 +438,6 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
             require_once( QGWPD_PATH . 'library/class-wr-review.php' );
 
         }
-
 
 
 
@@ -988,11 +987,13 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
             if ( is_wp_error( $list ) ) {
 
-                return self::render_error( sprintf ( 
-                        __( 'An error occured. You can <a href="%s">check out all the reviews on WordPress.org</a>', self::text_domain ), 
-                        esc_url( "https://wordpress.org/support/view/plugin-reviews/".self::$plugin_slug ) 
-                    ) 
+                self::$plugin_data->sections->reviews = sprintf ( 
+                    __( 'An error occured. You can <a href="%s">check out all the reviews on WordPress.org</a>', self::text_domain ), 
+                    esc_url( "https://wordpress.org/support/view/plugin-reviews/".self::$plugin_slug ) 
                 );
+
+                // log error ##
+                self::log( __( 'Error fetching review data', self::text_domain ) );
 
             }
 
@@ -1125,7 +1126,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 ?>
 				<li class='q-gwpd-active-installs'>
 					<span class="title">Active Installs:</span>
-					<span class="value"><?php echo $data->active_installs; ?> +</span>
+					<span class="value"><?php echo number_format( $data->active_installs ); ?> +</span>
 				</li>
 <?php
 
