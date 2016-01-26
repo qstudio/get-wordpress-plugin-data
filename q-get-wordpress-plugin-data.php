@@ -9,7 +9,12 @@
  * License: 		GPLv2 or later
  * Class:           Q_Get_WordPress_Plugin_Data
  * Text Domain:     q-gwpd
- * Based on:		https://github.com/wp-plugins/dcg-display-plugin-data/
+ */
+
+/**
+ * CREDITS - Thanks :)
+ * Initial idea Based on: https://github.com/wp-plugins/dcg-display-plugin-data/
+ * Plugin Review Classes from: https://wordpress.org/plugins/plugin-reviews/
  */
 
 // no cheating ##
@@ -20,6 +25,10 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
     // instatiate plugin via WP plugins_loaded - init is too late for CPT ##
     add_action( 'plugins_loaded', array ( 'Q_Get_WordPress_Plugin_Data', 'get_instance' ), 1 );
     
+    // plugin path
+    define( 'QGWPD_PATH', trailingslashit( plugin_dir_path( __FILE__ ) ) );
+    define( 'QGWPD_URL', trailingslashit( plugin_dir_url( __FILE__ ) ) );
+
     class Q_Get_WordPress_Plugin_Data {
                 
         // Refers to a single instance of this class. ##
@@ -28,19 +37,39 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         // Plugin Settings ##
         const version = '0.1';
         const text_domain = 'q-gwpd'; // for translation ##
-        const cache = true;
+        const cache = false;
         const cache_timeout = DAY_IN_SECONDS; // 60*60*24
+        const debug = false;
 
         // default args list ##
         public static 
         	$default_api_args = false,
         	$default_shortcode_args = false,
         	$default_stats_args = array(),
+            $default_review_args = array(),
         	$api_args = false,
-        	$plugin_stats_data = false,
+        	#$plugin_stats_data = false,
         	$plugins_section_titles = array(),
             $cache_handle = 'q-gwpd'
     	;
+
+
+        /**
+         * plugin data object
+         *
+         * @since 0.1.0
+         * @var string
+         */
+        public static $plugin_data = null;
+
+        /**
+         * Slug of the plugin we're getting reviews from
+         *
+         * @since 0.1.0
+         * @var string
+         */
+        public static $plugin_slug = null;
+
 
      	/**
          * Creates or returns an instance of this class.
@@ -79,6 +108,12 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
         	// set default stats args ##
         	self::set_default_stats_args();
+
+            // set default review args ##
+            self::set_default_review_args();
+
+            // load libraries ##
+            self::load_dependencies();
 
         	// build shortcode ##
 			add_shortcode( 'wp_plugin_data', array( $this, 'do_shortcode' ) );
@@ -275,7 +310,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         	if ( self::$default_api_args ) return;
 
         	// kick back array ##
-			return (object)self::$default_api_args = array(
+			return self::$default_api_args = array(
 				'slug' 			=> 'export-user-data',
 				'is_ssl' 		=> is_ssl(),
 				'fields'		=> array(
@@ -295,7 +330,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 					'homepage' 				=> true,
 					'versions' 				=> false,
 					'donate_link' 			=> true,
-					'reviews' 				=> false,
+					'reviews' 				=> true,
 					'banners' 				=> false,
 					'icons' 				=> false,
 					'active_installs' 		=> true,
@@ -321,7 +356,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         	if ( self::$default_shortcode_args ) return;
 
         	// kick back array ##
-			return (object)self::$default_shortcode_args = array(
+			return self::$default_shortcode_args = array(
 				'slug' 			=> 'export-user-data',
 				'downloaded' 	=> true,
 				'description' 	=> false,
@@ -347,12 +382,63 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         	if ( self::$default_stats_args ) return;
 
         	// kick back array ##
-			return (object)self::$default_stats_args = array(
+			return self::$default_stats_args = array(
 				'slug' 			=> 'export-user-data',
 				'limit' 		=> 'max',
 			);
 
         }
+
+
+        /**
+        * review defaults
+        *
+        * @since        0.1
+        * @return       Array       Arguments for API query
+        */
+        public static function set_default_review_args() 
+        {
+
+            // already set ##
+            if ( self::$default_review_args ) return;
+
+            // kick back objecy ##
+            return (object)self::$default_review_args = array(
+                'slug'            => 'plugin-reviews',
+                'rating'          => 'all',
+                'limit'           => 10,
+                'sortby'          => 'date',
+                'sort'            => 'DESC',
+                'truncate'        => 300,
+                'gravatar_size'   => 80,
+                'container'       => 'div',
+                'container_id'    => '',
+                'container_class' => '',
+                'link_all'        => 'no',
+                'link_add'        => 'no',
+                'layout'          => 'grid',
+                'no_query_string' => '0',
+                'exclude'         => ''
+            );
+
+        }
+
+
+
+        /**
+        * Load Require Libraries
+        *
+        * @since        0.1
+        * @return       void
+        */
+        public static function load_dependencies() 
+        {
+
+            require_once( QGWPD_PATH . 'library/class-wr-wordpress-plugin.php' );
+            require_once( QGWPD_PATH . 'library/class-wr-review.php' );
+
+        }
+
 
 
 
@@ -446,7 +532,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 		    // cache ##
 		    if ( self::cache ) {
 
-		    	set_transient( self::$cache_handle.$cache_handle, $get_plugin_data, self::cache_timeout );
+		    	set_transient( self::$cache_handle.$cache_handle, $get_plugin_data, apply_filters( 'q_gwpd_cache_lifetime', self::cache_timeout ) );
 
 		    }
 
@@ -469,7 +555,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
             // merge default args ##
             $args = (object) wp_parse_args( $args, self::$default_stats_args );
 
-        	if ( self::cache && $get_plugin_stats = get_transient( self::$cache_handle.'-'.$args->slug ) ) {
+        	if ( self::cache && $get_plugin_stats = get_transient( self::$cache_handle.'-'.md5( $args->slug ) ) ) {
 
         		#wp_die( self::pr( 'using cached data' ) );
         		return $get_plugin_stats;
@@ -540,7 +626,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 			// cache ##
 		    if ( self::cache && $request ) {
 
-		    	set_transient( self::$cache_handle.'-'.$args->slug, $request, self::cache_timeout );
+		    	set_transient( self::$cache_handle.'-'.md5( $args->slug ), $request, apply_filters( 'q_gwpd_cache_lifetime', self::cache_timeout ) );
 
 		    }
 
@@ -560,7 +646,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         {
 
         	// check if we have data ##
-        	if ( ! self::$plugin_stats_data ) {
+        	if ( ! self::$plugin_data->stats ) {
 
         		return false;
 
@@ -573,7 +659,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 			/*
 			{ "date": "2012-07-27", "value": 13 }, 
 		    */
-			foreach ( self::$plugin_stats_data as $key => $value ) {
+			foreach ( self::$plugin_data->stats as $key => $value ) {
 
 				$data_points .= sprintf( 
 						'{ "date": "%s", "value": %d },'
@@ -727,8 +813,8 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
             }
 
-            // new string ##
-            $handle = $attributes->slug;
+            // new string -- hash the plugin slug ##
+            $handle = md5( $attributes->slug );
 
             foreach ( $attributes as $key => $value ) {
 
@@ -748,6 +834,41 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         }
 
 
+        /**
+        * Sanitize inputs from user entry
+        *
+        * @since        0.1
+        * @return       Mixed       Array or String
+        */
+        public static function sanitize( $data = null ) 
+        {
+
+            // sanity check ##
+            if ( is_null( $data ) ) {
+
+                return false;
+
+            }
+
+            if ( is_array( $data ) ) {
+
+                foreach ( $data as $key => $value ) {
+
+                    $data[$key] = sanitize_text_field( $value );
+
+                }
+
+            } else {
+
+                $data = sanitize_text_field( $data );
+
+            }
+
+            // kick it back ##
+            return $data;
+
+        }
+
 		/**
         * Do shortcode with passed arguments 
         *
@@ -759,35 +880,44 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
         	// parse user attributes with defaults ##
         	// https://codex.wordpress.org/Function_Reference/shortcode_atts
-        	$attributes = (object)shortcode_atts( self::$default_shortcode_args, $attributes, 'wp_plugin_data' );
-            
+        	$attributes = shortcode_atts( self::$default_shortcode_args, $attributes, 'wp_plugin_data' );
+
+            // sanitize inputs ##
+            $attributes = self::sanitize( $attributes );
+
+            // cast to object ##
+            $attributes = (object)$attributes;
+
+            // test ##
+            #wp_die( self::pr( $attributes ) );
+
         	// build args list for API request ##
         	self::$api_args = wp_parse_args( array( 'slug' => $attributes->slug ), self::$default_api_args );
 
         	// check if we can reduce the API load by removing the sections data ##
         	self::get_sections( $attributes );
 
+            // assign value to property ##
+            self::$plugin_slug = $attributes->slug;
+
         	// grab plugin data ##
-        	$data = self::get_plugin_data( 
+        	self::$plugin_data = self::get_plugin_data( 
 	        		    'plugin_information' 
 	        		,   self::$api_args
                     ,   self::get_cache_handle( $attributes )
         		);
 
         	/** Check for Errors & Display the results */
-		    if ( is_wp_error( $data ) ) {
+		    if ( is_wp_error( self::$plugin_data ) ) {
 		 
-		        return $data->get_error_message();
+		        return self::render_error( self::$plugin_data->get_error_message() );
 
 		    }
 
-			// test it ##
-			#wp_die( self::pr( $data ) );
-
 			// no response ##
-			if ( ! $data ) {
+			if ( ! self::$plugin_data ) {
 
-				return __( "No data found for this plugin", self::text_domain );
+				return self::render_error( __( "No data found for this plugin", self::text_domain ) );
 
 			}
 
@@ -797,10 +927,10 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
                 #wp_die( self::pr( $attributes ) );
 
 				// try and grab stats ##
-				if ( $data->stats = self::get_plugin_stats( array( 'slug' => $attributes->slug ) ) ) {
+				if ( self::$plugin_data->stats = self::get_plugin_stats( array( 'slug' => self::$plugin_slug ) ) ) {
 
 					// assign stats data to static property ##
-					self::$plugin_stats_data = $data->stats;
+					#self::$plugin_stats_data = self::$plugin_data->stats;
 
 					// add JS in footer ##
 					add_action( 'wp_footer', array ( $this, 'render_stats' ) );
@@ -809,10 +939,112 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 			}
 
+            // cast sections to object ##
+            if ( isset( self::$plugin_data->sections ) ) { 
+
+                self::$plugin_data->sections = (object)self::$plugin_data->sections; 
+
+            }
+
+            // did we get reviews? if so, format them nicely ##
+            if ( self::$plugin_data->sections->reviews ) {
+
+                // format reviews ##
+                self::format_reviews();
+
+            }
+
+            // test it ##
+            #wp_die( self::pr( self::$plugin_data->sections->reviews[0] ) );
+
 			// kick back rendered shortcode ##
-			return self::render_shortcode( $data, $attributes );
+			return self::render_shortcode( self::$plugin_data, $attributes );
 
 		}
+
+
+        /**
+        * Render error message
+        *
+        * @since        0.1
+        * @return       String      HTML from error message
+        */
+        public static function format_reviews() 
+        {
+
+            // sanity check ##
+            if ( is_null( self::$plugin_data->sections->reviews ) || is_null( self::$plugin_slug ) ) {
+
+                return false;
+
+            }
+
+            // cast config to object ##
+            self::$default_review_args = (object)self::$default_review_args;
+            
+            // get results from Class ##
+            $response          = new WR_WordPress_Plugin( self::$plugin_slug, self::$plugin_data );
+            $list              = $response->get_reviews();
+
+            if ( is_wp_error( $list ) ) {
+
+                return self::render_error( sprintf ( 
+                        __( 'An error occured. You can <a href="%s">check out all the reviews on WordPress.org</a>', self::text_domain ), 
+                        esc_url( "https://wordpress.org/support/view/plugin-reviews/".self::$plugin_slug ) 
+                    ) 
+                );
+
+            }
+
+            // new array ##
+            $reviews = array();
+
+            foreach ( $list as $review ) {
+
+                $this_review = new WR_Review( $review, self::$default_review_args->gravatar_size, self::$default_review_args->truncate, self::$default_review_args->no_query_string );
+                $this_output = $this_review->get_review();
+
+                $reviews[] = (object)$this_output;
+
+            }
+
+            // assign results back to main $plugin_data object ##
+            self::$plugin_data->sections->reviews = $reviews;
+
+        }
+
+
+
+        /**
+        * Render error message
+        *
+        * @since        0.1
+        * @return       String      HTML from error message
+        */
+        public static function render_error( $error = null ) 
+        {
+
+            // sanity check ##
+            if ( is_null( $error ) ) {
+
+                return false;
+
+            }
+
+            // @todo - perhaps debug instead of display error based on self:debug ##
+            if ( self::debug ) { 
+             
+                self::log( $error );
+
+            }
+
+?>
+            <div class="q-error">
+                <?php echo wpautop( $error ); ?>
+            </div>
+<?php
+
+        }
 
 
 		/**
@@ -831,7 +1063,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         	// sanity check ##
         	if ( is_null( $data ) || is_null( $attributes ) ) {
 
-        		_e( "Can't render shortcode without data", self::text_domain );
+        		_e( "Can't render plugin information without data", self::text_domain );
 
         	}
 
@@ -843,9 +1075,9 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 			$rating_stars_holder_style = "position: relative;height: 17px;width: 92px; background: url($rating_stars_path) repeat-x bottom left; vertical-align: top; display:inline-block;";
 			$rating_stars_style = "background: url($rating_stars_path) repeat-x top left; height: 17px;float: left;text-indent: 100%;overflow: hidden;white-space: nowrap; width: {$data->rating}%";
-			$rating_stars_value = floor($data->rating/20);
+			$rating_stars_value = floor( $data->rating / 20 );
 
-			// Count average rating
+			// Count average rating ##
 			$stars = array();
 			#self::pr( $data->ratings );
 			foreach ( $data->ratings as $value ) {
@@ -857,16 +1089,12 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 			if ( ! empty( array_filter( $stars ) ) ) {
 				$calculate_average_rating = ( ( ( $stars[0] * 5 ) + ( $stars[1] * 4 ) + ( $stars[2] * 3 ) + ( $stars[3] * 2 ) + ( $stars[4] * 1 ) ) / $data->num_ratings );
 			}
-			#if ( empty( $calculate_average_rating ) ) { $calculate_average_rating = 0; }
 
-			// Format rating. Eg: 4.7 out of 5 stars, but 5 (no decimal) out of 5 stars
+			// Format rating. Eg: 4.7 out of 5 stars, not 5 (no decimal) out of 5 stars ##
 			$average_rating = ( is_float( $calculate_average_rating ) ? number_format( $calculate_average_rating, 1 ) : $calculate_average_rating );
 			$release_date = date( "d F Y", strtotime( $data->added ) );
 			$last_updated_date = date( "d F Y", strtotime( $data->last_updated ) );
 			$wordpress_url = "https://wordpress.org/plugins/".$data->slug;
-
-            // cast sections to object ##
-            if ( isset( $data->sections ) ) { $data->sections = (object)$data->sections; }
 
 ?>
 				<li class='q-gwpd-name'>

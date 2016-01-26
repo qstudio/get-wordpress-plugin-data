@@ -3,6 +3,7 @@ ul.star-rating {
 }
 
 #chartdiv {
+	display : none; /* shide and show on click on mini chart */
 	width	: 100%;
 	height	: 500px;
 }
