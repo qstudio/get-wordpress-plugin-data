@@ -3,7 +3,7 @@ Contributors: qlstudio
 Tags: plugin-api, plugins, api, promote, info, directory, specs, developer
 Requires at least: 3.5
 Tested up to: 4.4.1
-Stable tag: 0.1
+Stable tag: 0.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,9 @@ You can always open a [support thread](https://qstudio.us/support) if you have a
 == Screenshots ==
 
 == Changelog ==
+
+=== 0.2 ===
+* Added HTML parsing class to format screenshots and changelog
 
 === 0.1 ===
 * Initial release

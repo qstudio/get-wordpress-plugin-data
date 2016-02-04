@@ -3,7 +3,7 @@
  * Plugin Name: 	Get WordPress Plugin Data
  * Plugin URI: 		https://qstudio.us
  * Description: 	Get WordPress.org Plugin data and diplay using a shortcode.
- * Version: 		0.1
+ * Version: 		0.2
  * Author: 			Q Studio
  * Author URI: 		https://qstudio.us
  * License: 		GPLv2 or later
@@ -17,32 +17,39 @@
  * Plugin Review Classes from: https://wordpress.org/plugins/plugin-reviews/
  */
 
+/**
+* @todo - move all config to config.php file
+* @todo - add cache buster
+* @todo - move shortcode to Class ##
+* @todo - move plugins_api call to WR_WordPress_Plugin ##
+*/
+
 // no cheating ##
 defined( 'ABSPATH' ) OR exit;
 
 if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
-    
+
     // instatiate plugin via WP plugins_loaded - init is too late for CPT ##
     add_action( 'plugins_loaded', array ( 'Q_Get_WordPress_Plugin_Data', 'get_instance' ), 1 );
-    
+
     // plugin path
     define( 'QGWPD_PATH', trailingslashit( plugin_dir_path( __FILE__ ) ) );
     define( 'QGWPD_URL', trailingslashit( plugin_dir_url( __FILE__ ) ) );
 
     class Q_Get_WordPress_Plugin_Data {
-                
+
         // Refers to a single instance of this class. ##
         private static $instance = null;
 
         // Plugin Settings ##
-        const version = '0.1';
+        const version = '0.2';
         const text_domain = 'q-gwpd'; // for translation ##
         const cache = true;
         const cache_timeout = DAY_IN_SECONDS; // 60*60*24
         const debug = false;
 
         // default args list ##
-        public static 
+        public static
         	$default_api_args = false,
         	$default_shortcode_args = false,
         	$default_stats_args = array(),
@@ -76,9 +83,9 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
          *
          * @return  Foo     A single instance of this class.
          */
-        public static function get_instance() 
+        public static function get_instance()
         {
-            
+
             if ( null == self::$instance ) {
                 self::$instance = new self;
             }
@@ -86,15 +93,15 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
             return self::$instance;
 
         }
-        
+
 
         /**
          * Instatiate Class
-         * 
+         *
          * @since       0.1
          * @return      void
          */
-        private function __construct() 
+        private function __construct()
         {
 
         	// set text domain ##
@@ -119,12 +126,12 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 			add_shortcode( 'wp_plugin_data', array( $this, 'do_shortcode' ) );
 
 			if ( is_admin() ) {
-                
+
                 // styles and scripts ##
                 #add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
-                
+
             } else {
-                
+
                 // styles and scripts ##
                 add_action( 'wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ), 1 );
 
@@ -139,61 +146,61 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
         /**
          * Load Text Domain for translations
-         * 
+         *
          * @since       0.1.0
          * @return      void
          */
-        public function load_plugin_textdomain() 
+        public function load_plugin_textdomain()
         {
-            
+
             // set text-domain ##
             $domain = self::text_domain;
-            
+
             // The "plugin_locale" filter is also used in load_plugin_textdomain()
             $locale = apply_filters('plugin_locale', get_locale(), $domain);
 
             // try from global WP location first ##
             load_textdomain( $domain, WP_LANG_DIR.'/plugins/'.$domain.'-'.$locale.'.mo' );
-            
+
             // try from plugin last ##
             load_plugin_textdomain( $domain, FALSE, plugin_dir_path( __FILE__ ).'languages/' );
-            
+
         }
 
 
 		/**
          * Admin Enqueue Scripts
-         * 
+         *
          * @since       0.1
          * @return      void
          */
         public function admin_enqueue_scripts() {
 
             wp_enqueue_script( 'admin-'.self::text_domain.'-js',  self::get_plugin_url( 'assets/javascript/'.self::text_domain.'.js' ), array( 'jquery' ), self::version, true );
-            
+
             wp_register_style( 'admin-'.self::text_domain.'-css', self::get_plugin_url( 'assets/css/'.self::text_domain.'.css' ) );
             wp_enqueue_style( 'admin-'.self::text_domain.'-css' );
-            
+
         }
-        
-        
+
+
         /**
          * WP Enqueue Scripts - on the front-end of the site
-         * 
+         *
          * @since       0.1
          * @return      void
          */
         public function wp_enqueue_scripts() {
-            
+
         	global $post;
-			
+
 			if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'wp_plugin_data') ) {
 
 	            // Register the script ##
 	            // wp_register_script( ''.self::text_domain.'-js', self::get_plugin_url( 'assets/javascript/'.self::text_domain.'.js' ), array( 'jquery' ), self::version, true );
 
 	            // Now we can localize the script with our data.
-	            // $translation_array = array( 
+	            // $translation_array = array(
 	            //         'stylesheet_directory_uri'  => get_stylesheet_directory_uri()
 	            //     ,   'search_in'                 => __( "in", self::text_domain )
 	            //     ,   'search_from'               => __( "from", self::text_domain )
@@ -203,10 +210,10 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 	            // enqueue the script ##
 	            // wp_enqueue_script( ''.self::text_domain.'-js' );
-	            
+
 	            #wp_register_style( 'q-control-css', self::get_plugin_url( 'css/q-control.css' ) );
 	            #wp_enqueue_style( 'q-control-css' );
-	            
+
 	            wp_register_style( self::text_domain.'-css', self::get_plugin_url( 'assets/css/'.self::text_domain.'.css' ) );
 	            wp_enqueue_style( self::text_domain.'-css' );
 
@@ -217,14 +224,14 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
         /**
          * WP Enqueue Scripts - on demand for charts
-         * 
+         *
          * @since       0.1
          * @return      void
          */
         public static function wp_enqueue_scripts_amcharts_js() {
-            
+
         	global $post;
-			
+
 			if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'wp_plugin_data') ) {
 
 				// Register chart scripts - only enqueue on demand ##
@@ -244,12 +251,12 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 		/**
          * Get Plugin URL
-         * 
+         *
          * @since       0.1
          * @param       string      $path   Path to plugin directory
          * @return      string      Absoulte URL to plugin directory
          */
-        public static function get_plugin_url( $path = '' ) 
+        public static function get_plugin_url( $path = '' )
         {
 
             return plugins_url( ltrim( $path, '/' ), __FILE__ );
@@ -259,13 +266,13 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 
         /**
-         * 
+         *
          * Write to WP Error Log
-         * 
+         *
          * @since       1.5.0
          * @return      void
          */
-        public static function log( $log )  
+        public static function log( $log )
         {
             if ( true === WP_DEBUG ) {
                 if ( is_array( $log ) || is_object( $log ) ) {
@@ -279,18 +286,18 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
         /**
          * Pretty print_r / var_dump
-         * 
+         *
          * @since       0.1
          * @param       Mixed       $var        PHP variable name to dump
          * @param       string      $title      Optional title for the dump
          * @return      String      HTML output
          */
-        public static function pr( $var, $title = null ) 
-        { 
-            
+        public static function pr( $var, $title = null )
+        {
+
             if ( $title ) $title = '<h2>'.$title.'</h2>';
-            print '<pre class="var_dump">'; echo $title; var_dump($var); print '</pre>'; 
-            
+            print '<pre class="var_dump">'; echo $title; var_dump($var); print '</pre>';
+
         }
 
 
@@ -303,7 +310,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * @since 		0.1
         * @return 		Array 		Arguments for API query
         */
-        public static function set_default_api_args() 
+        public static function set_default_api_args()
         {
 
         	// already set ##
@@ -325,17 +332,17 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 					'downloadlink' 			=> true,
 					'last_updated' 			=> true,
 					'added' 				=> true,
-					'tags' 					=> false,
+					'tags' 					=> true,
 					'compatibility' 		=> true,
 					'homepage' 				=> true,
-					'versions' 				=> false,
+					'versions' 				=> true,
 					'donate_link' 			=> true,
 					'reviews' 				=> true,
-					'banners' 				=> false,
+					'banners' 				=> true,
 					'icons' 				=> false,
 					'active_installs' 		=> true,
-					'group' 				=> false,
-					'contributors' 			=> false
+					'group' 				=> true,
+					'contributors' 			=> true
 				)
 			);
 
@@ -349,7 +356,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * @since 		0.1
         * @return 		Array 		Arguments for API query
         */
-        public static function set_default_shortcode_args() 
+        public static function set_default_shortcode_args()
         {
 
         	// already set ##
@@ -361,8 +368,10 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 				'downloaded' 	=> true,
 				'description' 	=> false,
 				'installation' 	=> false,
+                'screenshots'   => true,
+                'changelog'     => true,
 				'faq' 			=> false,
-				'screenshots' 	=> false,
+                'reviews'       => true,
 				'stats'			=> false // day by day download stats, presented in a graph ##
 			);
 
@@ -375,7 +384,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * @since 		0.1
         * @return 		Array 		Arguments for API query
         */
-        public static function set_default_stats_args() 
+        public static function set_default_stats_args()
         {
 
         	// already set ##
@@ -396,7 +405,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * @since        0.1
         * @return       Array       Arguments for API query
         */
-        public static function set_default_review_args() 
+        public static function set_default_review_args()
         {
 
             // already set ##
@@ -404,7 +413,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
             // kick back objecy ##
             return (object)self::$default_review_args = array(
-                'slug'            => 'plugin-reviews',
+                'slug'            => 'export-user-data',
                 'rating'          => 'all',
                 'limit'           => 10,
                 'sortby'          => 'date',
@@ -431,11 +440,12 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * @since        0.1
         * @return       void
         */
-        public static function load_dependencies() 
+        public static function load_dependencies()
         {
 
             require_once( QGWPD_PATH . 'library/class-wr-wordpress-plugin.php' );
             require_once( QGWPD_PATH . 'library/class-wr-review.php' );
+            require_once( QGWPD_PATH . 'library/class-parse-html.php' );
 
         }
 
@@ -443,8 +453,8 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
         /**
 		* Sanitize and clean-up data returned from API
-		* 
-		* 
+		*
+		*
         */
         public static function sanitize_api_data( $data = null )
         {
@@ -494,10 +504,10 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * Request data from wordpress.org plugin API
         *
         * @since 		0.1
-        * @return 		String 		HTML from API request to wordpres.org 
+        * @return 		String 		HTML from API request to wordpres.org
         * @link 		https://developer.wordpress.org/reference/functions/plugins_api/
         */
-        public static function get_plugin_data( $action = null, $args = null, $cache_handle = null ) 
+        public static function get_plugin_data( $action = null, $args = null, $cache_handle = null )
         {
 
             #wp_die( self::pr( 'cache handle: '.self::$cache_handle.'_info'.$cache_handle ) );
@@ -520,7 +530,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
         	// make sure we've got the plugins_api() function loaded ##
 	        if ( ! function_exists( 'plugins_api' ) ) {
-			
+
 				require_once( ABSPATH . 'wp-admin/includes/plugin-install.php' );
 
 			}
@@ -531,13 +541,17 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 		    // cache ##
 		    if ( self::cache ) {
 
-		    	set_transient( self::$cache_handle.$cache_handle, $get_plugin_data, apply_filters( 'q_gwpd_cache_lifetime', self::cache_timeout ) );
+		    	set_transient(
+                    self::$cache_handle.$cache_handle,
+                    $get_plugin_data,
+                    apply_filters( 'q_gwpd_cache_lifetime', self::cache_timeout )
+                );
 
 		    }
 
 		    // kick it back ##
         	return $get_plugin_data;
- 
+
         }
 
 
@@ -587,16 +601,16 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 			// check for SSL errors ##
 			if ( $ssl && is_wp_error( $request ) ) {
-				
+
 				// log error ##
-				self::log( 
-					sprintf( 
+				self::log(
+					sprintf(
 						__( 'Error in %s :: $s / %s', self::text_domain )
 						, 	__CLASS__
 						,  	__METHOD__
 						, 	$request->get_error_message()
 					)
-				); 
+				);
 
 				// try again without SSL ##
 				$request = wp_remote_post( $http_url, $http_args );
@@ -607,14 +621,14 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 			if ( is_wp_error( $request ) ) {
 
 				// log error ##
-				self::log( 
-					sprintf( 
+				self::log(
+					sprintf(
 						__( 'Error in %s :: $s / %s', self::text_domain )
 						, 	__CLASS__
 						,  	__METHOD__
 						, 	$request->get_error_message()
 					)
-				); 
+				);
 
 			} else {
 
@@ -625,7 +639,11 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 			// cache ##
 		    if ( self::cache && $request ) {
 
-		    	set_transient( self::$cache_handle.'-'.md5( $args->slug ), $request, apply_filters( 'q_gwpd_cache_lifetime', self::cache_timeout ) );
+		    	set_transient(
+                    self::$cache_handle.'-'.md5( $args->slug ),
+                    $request,
+                    apply_filters( 'q_gwpd_cache_lifetime', self::cache_timeout )
+                );
 
 		    }
 
@@ -636,7 +654,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 
 		/**
-        * Render Markup for JS charts based on imported stats 
+        * Render Markup for JS charts based on imported stats
         *
         * @since 		0.1
         * @return 		String 		HTML for charts
@@ -656,11 +674,11 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 			// loop over each item ##
 			/*
-			{ "date": "2012-07-27", "value": 13 }, 
+			{ "date": "2012-07-27", "value": 13 },
 		    */
 			foreach ( self::$plugin_data->stats as $key => $value ) {
 
-				$data_points .= sprintf( 
+				$data_points .= sprintf(
 						'{ "date": "%s", "value": %d },'
 					,	$key
 					,	$value
@@ -670,7 +688,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 			#wp_die( self::pr( $data_points ) );
 
-			// print out JS ##		
+			// print out JS ##
 ?>
 			<script>
 			var chart = AmCharts.makeChart("chartdiv", {
@@ -763,12 +781,12 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 
 		/**
-        * Do shortcode with passed arguments 
+        * Do shortcode with passed arguments
         *
         * @since 		0.1
-        * @return 		String 		HTML from API request to wordpres.org 
+        * @return 		String 		HTML from API request to wordpres.org
         */
-        public function get_sections( $attributes = null ) 
+        public function get_sections( $attributes = null )
         {
 
         	// nada ##
@@ -778,19 +796,32 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
         	}
 
-        	#wp_die( self::pr( self::$api_args ) );
+            #self::pr( $attributes );
+        	#self::pr( self::$api_args );
 
-        	// 
-        	if ( 
-        			false == $attributes->description 
+        	// remove sections, if not requested ##
+        	if (
+        			false == $attributes->description
     			&& 	false == $attributes->installation
     			&& 	false == $attributes->faq
     			&& 	false == $attributes->screenshots
+                &&  false == $attributes->changelog
     		) {
 
         		self::$api_args['fields']['sections'] = false;
 
-    		}
+            }
+
+            // remove reviews, if not requested ##
+            if (
+                false == $attributes->reviews
+            ) {
+
+                self::$api_args['fields']['reviews'] = false;
+
+            }
+
+            #wp_die( self::pr( self::$api_args ) );
 
         }
 
@@ -800,9 +831,9 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * Generate cache handle from passed shortcode attributes
         *
         * @since        0.1
-        * @return       String      HTML from API request to wordpres.org 
+        * @return       String      HTML from API request to wordpres.org
         */
-        public static function get_cache_handle( $attributes = null ) 
+        public static function get_cache_handle( $attributes = null )
         {
 
             if ( is_null( $attributes ) ) {
@@ -839,7 +870,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * @since        0.1
         * @return       Mixed       Array or String
         */
-        public static function sanitize( $data = null ) 
+        public static function sanitize( $data = null )
         {
 
             // sanity check ##
@@ -869,12 +900,12 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         }
 
 		/**
-        * Do shortcode with passed arguments 
+        * Do shortcode with passed arguments
         *
         * @since 		0.1
-        * @return 		String 		HTML from API request to wordpres.org 
+        * @return 		String 		HTML from API request to wordpres.org
         */
-        public function do_shortcode( $attributes = null ) 
+        public function do_shortcode( $attributes = null )
         {
 
         	// parse user attributes with defaults ##
@@ -896,19 +927,21 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         	// check if we can reduce the API load by removing the sections data ##
         	self::get_sections( $attributes );
 
+            #wp_die( self::pr( $attributes ) );
+
             // assign value to property ##
             self::$plugin_slug = $attributes->slug;
 
         	// grab plugin data ##
-        	self::$plugin_data = self::get_plugin_data( 
-	        		    'plugin_information' 
+        	self::$plugin_data = self::get_plugin_data(
+	        		    'plugin_information'
 	        		,   self::$api_args
                     ,   self::get_cache_handle( $attributes )
         		);
 
         	/** Check for Errors & Display the results */
 		    if ( is_wp_error( self::$plugin_data ) ) {
-		 
+
 		        return self::render_error( self::$plugin_data->get_error_message() );
 
 		    }
@@ -921,7 +954,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 			}
 
 			// stats ##
-			if ( 'true' == $attributes->stats ) { 
+			if ( true == $attributes->stats ) {
 
                 #wp_die( self::pr( $attributes ) );
 
@@ -939,22 +972,38 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 			}
 
             // cast sections to object ##
-            if ( isset( self::$plugin_data->sections ) ) { 
+            if ( isset( self::$plugin_data->sections ) ) {
 
-                self::$plugin_data->sections = (object)self::$plugin_data->sections; 
+                self::$plugin_data->sections = (object)self::$plugin_data->sections;
 
             }
 
             // did we get reviews? if so, format them nicely ##
-            if ( self::$plugin_data->sections->reviews ) {
+            if ( true == $attributes->reviews && self::$plugin_data->sections->reviews ) {
 
                 // format reviews ##
                 self::format_reviews();
 
             }
 
+            // did we get reviews? if so, format them nicely ##
+            if ( true == $attributes->screenshots && self::$plugin_data->sections->screenshots ) {
+
+                // format reviews ##
+                self::format_screenshots();
+
+            }
+
+            // did we get reviews? if so, format them nicely ##
+            if ( true == $attributes->changelog && self::$plugin_data->sections->changelog ) {
+
+                // format reviews ##
+                self::format_changelog();
+
+            }
+
             // test it ##
-            #wp_die( self::pr( self::$plugin_data->sections->reviews[0] ) );
+            #self::pr( self::$plugin_data->sections->changelog );
 
 			// kick back rendered shortcode ##
 			return self::render_shortcode( self::$plugin_data, $attributes );
@@ -963,12 +1012,66 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 
         /**
-        * Render error message
+         * Format changelog from html to multidimesional array
+         *
+         * @since  0.1
+         * @return void
+         */
+        public static function format_changelog()
+        {
+
+            // sanity check ##
+            if ( is_null( self::$plugin_data->sections->changelog ) ) {
+
+                return false;
+
+            }
+
+            // load up parser ##
+            $parser = new Q_Parse_HTML( self::$plugin_data->sections->changelog );
+
+            // return data to class property ##
+            self::$plugin_data->sections->changelog = $parser->changelog();
+
+            #wp_die( self::pr( self::$plugin_data->sections->changelog ) );
+
+        }
+
+
+        /**
+         * Format screenshots from html to multidimesional array
+         *
+         * @since  0.1
+         * @return void
+         */
+        public static function format_screenshots()
+        {
+
+            // sanity check ##
+            if ( is_null( self::$plugin_data->sections->screenshots ) ) {
+
+                return false;
+
+            }
+
+            // load up parser ##
+            $parser = new Q_Parse_HTML( self::$plugin_data->sections->screenshots );
+
+            // return data to class property ##
+            self::$plugin_data->sections->screenshots = $parser->screenshots();
+
+            #wp_die( self::pr( self::$plugin_data->sections->screenshots ) );
+
+        }
+
+
+        /**
+        * Format plugin reviews
         *
         * @since        0.1
-        * @return       String      HTML from error message
+        * @return       void
         */
-        public static function format_reviews() 
+        public static function format_reviews()
         {
 
             // sanity check ##
@@ -980,16 +1083,16 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
             // cast config to object ##
             self::$default_review_args = (object)self::$default_review_args;
-            
+
             // get results from Class ##
             $response          = new WR_WordPress_Plugin( self::$plugin_slug, self::$plugin_data );
             $list              = $response->get_reviews();
 
             if ( is_wp_error( $list ) ) {
 
-                self::$plugin_data->sections->reviews = sprintf ( 
-                    __( 'An error occured. You can <a href="%s">check out all the reviews on WordPress.org</a>', self::text_domain ), 
-                    esc_url( "https://wordpress.org/support/view/plugin-reviews/".self::$plugin_slug ) 
+                self::$plugin_data->sections->reviews = sprintf (
+                    __( 'An error occured. You can <a href="%s">check out all the reviews on WordPress.org</a>', self::text_domain ),
+                    esc_url( "https://wordpress.org/support/view/plugin-reviews/".self::$plugin_slug )
                 );
 
                 // log error ##
@@ -1022,7 +1125,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
         * @since        0.1
         * @return       String      HTML from error message
         */
-        public static function render_error( $error = null ) 
+        public static function render_error( $error = null )
         {
 
             // sanity check ##
@@ -1033,8 +1136,8 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
             }
 
             // @todo - perhaps debug instead of display error based on self:debug ##
-            if ( self::debug ) { 
-             
+            if ( self::debug ) {
+
                 self::log( $error );
 
             }
@@ -1049,12 +1152,12 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 
 		/**
-        * Do shortcode with passed arguments 
+        * Do shortcode with passed arguments
         *
         * @since 		0.1
-        * @return 		String 		HTML from API request to wordpres.org 
+        * @return 		String 		HTML from API request to wordpres.org
         */
-        public static function render_shortcode( $data = null, $attributes = null ) 
+        public static function render_shortcode( $data = null, $attributes = null )
         {
 
 ?>
@@ -1080,6 +1183,9 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 			// Count average rating ##
 			$stars = array();
+
+            #echo serialize($data->ratings);
+
 			#self::pr( $data->ratings );
 			foreach ( $data->ratings as $value ) {
 			    $stars[] = isset( $value ) ? $value : 0 ;
@@ -1132,7 +1238,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 				} // active installs ##
 
-?>				
+?>
 				<li class='q-gwpd-last_updated'>
 					<span class="title">Last Updated:</span>
 					<span class="value"><?php echo $last_updated_date; ?></span>
@@ -1151,7 +1257,7 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 
 			} // stats ##
 
-?>		
+?>
 				<li class='q-gwpd-requires_wp'>
 					<span class="title">Requires:</span>
 					<span class="value"><?php echo $data->requires; ?> or higher</span>
@@ -1164,8 +1270,8 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 					<span class="title">Released:</span>
 					<span class="value"><?php echo $release_date; ?></span>
 				</li>
-				
-				
+
+
 <?php
 
 			if ( $attributes->description == true && isset( $data->sections ) && isset( $data->sections->description ) ) {
@@ -1206,11 +1312,22 @@ if ( ! class_exists( 'Q_Get_WordPress_Plugin_Data' ) ) {
 ?>
 				<li class='q-gwpd-screenshots'>
 					<span class="title">Screenshots:</span>
-					<span class="value"><?php echo $data->sections->screenshots; ?></span>
+					<span class="value"><?php self::pr( $data->sections->screenshots ); echo serialize($data->sections->screenshots);?></span>
 				</li>
 <?php
 
 			}
+
+            if ( $attributes->changelog == true && isset( $data->sections ) && isset( $data->sections->changelog ) ) {
+
+?>
+                <li class='q-gwpd-changelog'>
+                    <span class="title">Changelog:</span>
+                    <span class="value"><?php self::pr( $data->sections->changelog ); ?></span>
+                </li>
+<?php
+
+            }
 
 ?>
 			</ul>
